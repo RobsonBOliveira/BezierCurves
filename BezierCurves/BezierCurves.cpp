@@ -58,13 +58,13 @@ void BezierCurves::Update()
         float y = (cy - my) / cy;
 
         vertices[index] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
-        index = (index + 1) % MaxSize;
+        index = (index + 1) % 4;
         
-        if (count < MaxSize)
-            ++count;
+        if (points < MaxSize)
+            ++points;
     }
 
-    if (count > 3) 
+    if (points > 3) 
     {
 		float t, x, y;
         Vertex curve[LineSegs + 1];
@@ -80,8 +80,9 @@ void BezierCurves::Update()
                 + t * t * t * vertices[3].Pos.y;
             curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
         }
+
         curveBuffer->Copy(curve, LineSegs + 1);
-		count = LineSegs + 1;
+		points = LineSegs + 1;
         // desenha curva
         Display();
     }
@@ -110,7 +111,7 @@ void BezierCurves::Display()
     graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 
     // submete comandos de desenho
-    graphics->CommandList()->DrawInstanced(count, 1, 0, 0);
+    graphics->CommandList()->DrawInstanced(points, 1, 0, 0);
 
     // apresenta backbuffer
     graphics->Present();    
