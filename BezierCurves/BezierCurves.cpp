@@ -57,7 +57,7 @@ void BezierCurves::Update()
         float x = (mx - cx) / cx;
         float y = (cy - my) / cy;
 
-        vertices[index] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
+        supportPoints[index] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
         index = (index + 1) % 4;
         
         if (points < MaxSize)
@@ -70,14 +70,14 @@ void BezierCurves::Update()
         Vertex curve[LineSegs + 1];
         for (int i = 0; i <= LineSegs; i++) {
             t = 1.0f / LineSegs * i;
-			x = pow(1.0f - t, 3) * vertices[0].Pos.x
-                + 3 * t * pow(1.0f - t, 2) * vertices[1].Pos.x
-                + 3 * t * t * (1.0f - t) * vertices[2].Pos.x
-                + t * t * t * vertices[3].Pos.x;
-            y = pow(1.0f - t, 3) * vertices[0].Pos.y
-                + 3 * t * pow(1.0f - t, 2) * vertices[1].Pos.y
-                + 3 * t * t * (1.0f - t) * vertices[2].Pos.y
-                + t * t * t * vertices[3].Pos.y;
+			x = pow(1.0f - t, 3) * supportPoints[0].Pos.x
+                + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.x
+                + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.x
+                + t * t * t * supportPoints[3].Pos.x;
+            y = pow(1.0f - t, 3) * supportPoints[0].Pos.y
+                + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.y
+                + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.y
+                + t * t * t * supportPoints[3].Pos.y;
             curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
         }
 

@@ -35,6 +35,7 @@ private:
     static const uint MaxSize = 8192;
     static const int LineSegs = 100;
     Vertex vertices[MaxSize];
+    Vertex supportPoints[4];
     uint points = 0;
     uint count = 0;
     uint index = 0;
