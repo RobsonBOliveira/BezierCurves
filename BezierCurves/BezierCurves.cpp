@@ -59,30 +59,19 @@ void BezierCurves::Update()
 
         supportPoints[index] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
         index = (index + 1) % 4;
-        
-        if (points < MaxSize)
-            ++points;
+       
+        ++points;
     }
 
-    if (points > 3) 
+    if (points == 4) 
     {
-		float t, x, y;
-        Vertex curve[LineSegs + 1];
-        for (int i = 0; i <= LineSegs; i++) {
-            t = 1.0f / LineSegs * i;
-			x = pow(1.0f - t, 3) * supportPoints[0].Pos.x
-                + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.x
-                + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.x
-                + t * t * t * supportPoints[3].Pos.x;
-            y = pow(1.0f - t, 3) * supportPoints[0].Pos.y
-                + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.y
-                + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.y
-                + t * t * t * supportPoints[3].Pos.y;
-            curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
-        }
-
-        curveBuffer->Copy(curve, LineSegs + 1);
-		points = LineSegs + 1;
+        GetBezierCurve();
+	    count += LineSegs + 1;
+        curveBuffer->Copy(vertices, count);
+        points = 2;
+        index = 2;
+        supportPoints[0] = supportPoints[2];
+        supportPoints[1] = supportPoints[3];
         // desenha curva
         Display();
     }
@@ -111,7 +100,7 @@ void BezierCurves::Display()
     graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 
     // submete comandos de desenho
-    graphics->CommandList()->DrawInstanced(points, 1, 0, 0);
+    graphics->CommandList()->DrawInstanced(count, 1, 0, 0);
 
     // apresenta backbuffer
     graphics->Present();    
@@ -131,6 +120,28 @@ void BezierCurves::Finalize()
 	delete squareBuffer;
 	delete lineBuffer;
 	delete curveBufferBackup;
+}
+
+Vertex* BezierCurves::GetBezierCurve()
+{
+    float t, x, y;
+    Vertex curve[LineSegs + 1];
+    for (int i = 0; i <= LineSegs; i++) {
+        t = 1.0f / LineSegs * i;
+        x = pow(1.0f - t, 3) * supportPoints[0].Pos.x
+            + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.x
+            + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.x
+            + t * t * t * supportPoints[3].Pos.x;
+        y = pow(1.0f - t, 3) * supportPoints[0].Pos.y
+            + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.y
+            + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.y
+            + t * t * t * supportPoints[3].Pos.y;
+        curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
+    }
+    for (int i = 0; i <= LineSegs; i++)
+        vertices[count + i] = curve[i];
+
+	return curve;
 }
 
 // ------------------------------------------------------------------------------

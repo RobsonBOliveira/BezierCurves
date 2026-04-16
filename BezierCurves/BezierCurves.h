@@ -45,6 +45,7 @@ public:
     void Update();
     void Display();
     void Finalize();
+    Vertex* GetBezierCurve();
 
     void BuildRootSignature();
     void BuildPipelineState();
