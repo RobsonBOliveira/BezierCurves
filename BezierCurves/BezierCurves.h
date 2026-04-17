@@ -10,6 +10,8 @@
 **********************************************************************************/
 
 #include "DXUT.h"
+#include <vector>
+using namespace std;
 
 // ------------------------------------------------------------------------------
 
@@ -33,8 +35,10 @@ private:
     VertexBuffer<Vertex>* lineBuffer = nullptr;
 
     static const uint MaxSize = 8192;
-    static const int LineSegs = 100;
-    Vertex vertices[MaxSize];
+    static const int LineSegs = 30;
+    //Vertex vertices[MaxSize];
+	vector <Vertex> backupVertices;
+	vector <Vertex> vertices;
     Vertex supportPoints[4];
     uint points = 0;
     uint count = 0;

@@ -67,11 +67,11 @@ void BezierCurves::Update()
     {
         GetBezierCurve();
 	    count += LineSegs + 1;
-        curveBuffer->Copy(vertices, count);
+        curveBuffer->Copy(vertices.data(), count);
         points = 2;
         index = 2;
-        supportPoints[0] = supportPoints[2];
-        supportPoints[1] = supportPoints[3];
+        supportPoints[1] = supportPoints[2];
+        supportPoints[0] = supportPoints[3];
         // desenha curva
         Display();
     }
@@ -139,7 +139,7 @@ Vertex* BezierCurves::GetBezierCurve()
         curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
     }
     for (int i = 0; i <= LineSegs; i++)
-        vertices[count + i] = curve[i];
+        vertices.push_back(curve[i]);
 
 	return curve;
 }
