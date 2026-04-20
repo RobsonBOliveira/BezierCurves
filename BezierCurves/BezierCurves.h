@@ -21,6 +21,16 @@ struct Vertex
 
 // ------------------------------------------------------------------------------
 
+enum CurveStates
+{
+    WaitingP0,
+    WaitingP1,
+    WaitingP2P3,
+	Adjusting,
+};
+
+// ------------------------------------------------------------------------------
+
 class BezierCurves : public App
 {
 private:
@@ -34,18 +44,17 @@ private:
 
     static const uint MaxSize = 8192;
     static const int LineSegs = 30;
+
     Vertex actualCurve[LineSegs + 1];
     Vertex totalCurve[MaxSize] = {};
 	Vertex P[4] = {};
-	uint numClicks = 0;
-	bool isAdjusting = false;
+    CurveStates state = WaitingP0;
     uint count = 0;
     
     Vertex actualCurveBackup[LineSegs + 1];
     Vertex totalCurveBackup[MaxSize] = {};
     Vertex PBackup[4] = {};
-	uint numClicksBackup = 0;
-    bool isAdjustingBackup = false;
+    CurveStates stateBackup = WaitingP0;
     uint countBackup = 0;
 
 public:

@@ -57,37 +57,44 @@ void BezierCurves::Update()
     // cria vértices com o botão do mouse
     if (input->KeyPress(VK_LBUTTON))
     {
-		numClicks++;
-
-        switch (numClicks)
+        switch (state)
         {
-            case 1:
+            case WaitingP0:
                 P[0] = {XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White}};
+				state = WaitingP1;
 				break;
-            case 2:
+
+            case WaitingP1:
 				P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+				state = WaitingP2P3;
                 break;
-			case 3:
-				isAdjusting = true;
+
+			case WaitingP2P3:
                 P[2] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 P[3] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+
                 BezierCurve(actualCurve, P);
 				actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
+
+				state = Adjusting;
                 break;
-            case 4:
+
+            case Adjusting:
                 P[0] = P[3];
                 P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
-                numClicks = 2;
+
                 for(int i = 0; i < LineSegs+1; i++)
                     totalCurve[count + i] = actualCurve[i];
+
                 count += LineSegs + 1;
 				vBuffer->Copy(totalCurve, count);
-                isAdjusting = false;
+
+				state = WaitingP2P3;
 				break;
         }
     }
 
-    if (isAdjusting) {
+    if (state == Adjusting) {
         float lastP2x = P[2].Pos.x;
         float lastP2y = P[2].Pos.y;
 
@@ -95,6 +102,7 @@ void BezierCurves::Update()
         {
             P[2].Pos.x = (2 * P[3].Pos.x - x);
             P[2].Pos.y = (2 * P[3].Pos.y - y);
+
             BezierCurve(actualCurve, P);
             actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
 		}
@@ -115,9 +123,8 @@ void BezierCurves::Update()
         PBackup[2] = P[2];
         PBackup[3] = P[3];
 
-		numClicksBackup = numClicks;
         countBackup = count;
-        isAdjustingBackup = isAdjusting;
+		stateBackup = state;
     }
 
 	// carrega vértices previamente salvos
@@ -134,17 +141,15 @@ void BezierCurves::Update()
 		P[2] = PBackup[2];
 		P[3] = PBackup[3];
 
-        numClicks = numClicksBackup;
         count = countBackup;
-        isAdjusting = isAdjustingBackup;
+		state = stateBackup;
     }
 
 	// limpa vértices
     if(input->KeyPress(VK_DELETE))
     {
-		isAdjusting = false;
+		state = WaitingP0;
 		count = 0;
-		numClicks = 0;
     }
 
     aux->Copy(&P[2], 1);
@@ -168,7 +173,7 @@ void BezierCurves::Display()
     graphics->CommandList()->DrawInstanced(count, 1, 0, 0);
 
     // desenha linha em construção
-    if (isAdjusting)
+    if (state == Adjusting)
     {
         graphics->CommandList()->IASetVertexBuffers(0, 1, actualCurveBuffer->View());
         graphics->CommandList()->DrawInstanced(LineSegs + 1, 1, 0, 0);
