@@ -23,10 +23,19 @@ struct Vertex
 
 enum CurveStates
 {
-    WaitingP0,
-    WaitingP1,
-    WaitingP2P3,
-	Adjusting,
+    WAITING_P0,
+    WAITING_P1,
+    WAITING_P2P3,
+	ADJUSTING,
+};
+
+// ------------------------------------------------------------------------------
+
+enum SupportStates
+{
+    INNITIAL_SUPPORTS,
+	ADJUSTING_SUPPORTS,
+    DRAWING_SUPPORTS
 };
 
 // ------------------------------------------------------------------------------
@@ -46,9 +55,10 @@ private:
     static const uint MaxSize = 8192;
     static const int LineSegs = 30;
 
-	Vertex totalSupportSquares[12];
+	Vertex totalSupportSquares[24];
 	Vertex actualSupportSquares[12];
 	uint supportSquaresCount;
+    SupportStates supportState;
 
     Vertex actualCurve[LineSegs + 1];
     Vertex totalCurve[MaxSize];
