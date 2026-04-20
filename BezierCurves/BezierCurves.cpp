@@ -21,7 +21,8 @@ void BezierCurves::Init()
  
     // cria vertex buffer
     vBuffer = new VertexBuffer<Vertex>(nullptr, MaxSize);
-    aux = new VertexBuffer<Vertex>(nullptr, 1);
+    supportSquaresBuffer = new VertexBuffer<Vertex>(nullptr, 12);
+    actualSupportSquaresBuffer = new VertexBuffer<Vertex>(nullptr, 12);
     actualCurveBuffer = new VertexBuffer<Vertex>(nullptr, LineSegs + 1);
 
     // ------------------
@@ -48,7 +49,6 @@ void BezierCurves::Update()
     // o eixo y da tela cresce na direção oposta do cartesiano
     float x = (mx - cx) / cx;
     float y = (cy - my) / cy;
-
 
     // sai com o pressionamento da tecla ESC
     if (input->KeyPress(VK_ESCAPE))
@@ -77,6 +77,11 @@ void BezierCurves::Update()
 				actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
 
 				state = Adjusting;
+
+                for (int i = 0; i < 12; i++)
+                    totalSupportSquares[i] = actualSupportSquares[i];
+                supportSquaresBuffer->Copy(totalSupportSquares, 12);
+
                 break;
 
             case Adjusting:
@@ -94,7 +99,19 @@ void BezierCurves::Update()
         }
     }
 
-    if (state == Adjusting) {
+    if (state == WaitingP1)
+    {
+        GetSupportSquaresVertex(actualSupportSquares, P[0], x, y);
+        actualSupportSquaresBuffer->Copy(actualSupportSquares, 12); 
+
+        for (int i = 0; i < 12; i++)
+            totalSupportSquares[i] = actualSupportSquares[i];
+		supportSquaresBuffer->Copy(totalSupportSquares, 12);
+        supportSquaresCount = 12;
+    }
+
+    if (state == Adjusting) 
+    {
         float lastP2x = P[2].Pos.x;
         float lastP2y = P[2].Pos.y;
 
@@ -105,9 +122,11 @@ void BezierCurves::Update()
 
             BezierCurve(actualCurve, P);
             actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
+
+            GetSupportSquaresVertex(actualSupportSquares, P[3], x, y);
+			actualSupportSquaresBuffer->Copy(actualSupportSquares, 12);
 		}
     }
-
 
     // salva os vértices já criados
     if(input->KeyPress('S'))
@@ -118,6 +137,12 @@ void BezierCurves::Update()
         for (uint i = 0; i < LineSegs + 1; i++)
             actualCurveBackup[i] = actualCurve[i];
 
+        for (uint i = 0; i < 12; i++)
+        {
+            totalSupportSquaresBackup[i] = totalSupportSquares[i];
+            actualSupportSquaresBackup[i] = actualSupportSquares[i];
+        }
+
 		PBackup[0] = P[0];
 		PBackup[1] = P[1];
         PBackup[2] = P[2];
@@ -125,6 +150,7 @@ void BezierCurves::Update()
 
         countBackup = count;
 		stateBackup = state;
+		supportSquaresCountBackup = supportSquaresCount;
     }
 
 	// carrega vértices previamente salvos
@@ -136,6 +162,13 @@ void BezierCurves::Update()
         for(uint i = 0; i < LineSegs + 1; i++)
 			actualCurve[i] = actualCurveBackup[i];
 
+        for (uint i = 0; i < 12; i++)
+        {
+			totalSupportSquares[i] = totalSupportSquaresBackup[i];
+			actualSupportSquares[i] = actualSupportSquaresBackup[i];
+        }
+
+
 		P[0] = PBackup[0];
 		P[1] = PBackup[1];
 		P[2] = PBackup[2];
@@ -143,6 +176,7 @@ void BezierCurves::Update()
 
         count = countBackup;
 		state = stateBackup;
+        supportSquaresCount = supportSquaresCountBackup;
     }
 
 	// limpa vértices
@@ -152,8 +186,7 @@ void BezierCurves::Update()
 		count = 0;
     }
 
-    aux->Copy(&P[2], 1);
-	Display();
+    Display();
 }
 
 // ------------------------------------------------------------------------------
@@ -179,12 +212,21 @@ void BezierCurves::Display()
         graphics->CommandList()->DrawInstanced(LineSegs + 1, 1, 0, 0);
     }
 
-    //desenho dos pontos
-	graphics->CommandList()->SetPipelineState(pointState);
-    graphics->CommandList()->IASetVertexBuffers(0, 1, aux->View());
-    graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-    graphics->CommandList()->DrawInstanced(1, 1, 0, 0);
+    //desenho dos pontos de controle
+    graphics->CommandList()->SetPipelineState(squareState);
+    graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    
+    if(supportSquaresCount > 0)
+    {
+        graphics->CommandList()->IASetVertexBuffers(0, 1, supportSquaresBuffer->View());
+        graphics->CommandList()->DrawInstanced(12, 1, 0, 0);
+    }
 
+    if(state != WaitingP0)
+    {
+        graphics->CommandList()->IASetVertexBuffers(0, 1, actualSupportSquaresBuffer->View());
+        graphics->CommandList()->DrawInstanced(12, 1, 0, 0);
+    }
 
     // apresenta backbuffer
     graphics->Present();    
@@ -200,9 +242,10 @@ void BezierCurves::Finalize()
     // libera memória alocada
     rootSignature->Release();
     pipelineState->Release();
-	pointState->Release();
+	squareState->Release();
     delete vBuffer;
-    delete aux;
+    delete supportSquaresBuffer;
+    delete actualSupportSquaresBuffer;
 	delete actualCurveBuffer;
 }
 
@@ -228,6 +271,31 @@ void BezierCurves::BezierCurve(Vertex * curve, Vertex * P)
 }
 
 // ------------------------------------------------------------------------------
+
+void BezierCurves::GetSupportSquaresVertex(Vertex * supportSquareVertex, Vertex vertex, float x, float y)
+{
+	float size = 0.005f;
+	float oppositeX = (2 * vertex.Pos.x - x);
+	float oppositeY = (2 * vertex.Pos.y - y);
+
+    supportSquareVertex[0] = { XMFLOAT3{x - size, y - size, 0}, XMFLOAT4{ Colors::Red } };
+    supportSquareVertex[1] = { XMFLOAT3{x + size, y - size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[2] = { XMFLOAT3{x + size, y + size, 0}, XMFLOAT4{Colors::Red} };
+
+    supportSquareVertex[3] = { XMFLOAT3{x - size, y - size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[4] = { XMFLOAT3{x + size, y + size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[5] = { XMFLOAT3{x - size, y + size, 0}, XMFLOAT4{Colors::Red} };
+
+    supportSquareVertex[6] = { XMFLOAT3{oppositeX - size, oppositeY - size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[7] = { XMFLOAT3{oppositeX + size, oppositeY - size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[8] = { XMFLOAT3{oppositeX + size, oppositeY + size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[9] = { XMFLOAT3{oppositeX - size, oppositeY - size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[10] = { XMFLOAT3{oppositeX + size, oppositeY + size, 0}, XMFLOAT4{Colors::Red} };
+    supportSquareVertex[11] = { XMFLOAT3{oppositeX - size, oppositeY + size, 0}, XMFLOAT4{Colors::Red} };
+
+}
+
+// ------------------------------------------------------------------------------
 //                                  WinMain                                      
 // ------------------------------------------------------------------------------
 
@@ -239,7 +307,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,    _In_opt_ HINSTANCE hPrevInstan
         // cria motor e configura a janela
         Engine* engine = new Engine();
         engine->window->Mode(ASPECTRATIO);
-        engine->window->Size(1024, 600);
+        engine->window->Size(1024, 1024);
         engine->window->Color(25, 25, 25);
         engine->window->Title("Bézier Curves");
         engine->window->Icon("Icon");

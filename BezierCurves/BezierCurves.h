@@ -36,26 +36,35 @@ class BezierCurves : public App
 private:
     ID3D12RootSignature* rootSignature = nullptr;
     ID3D12PipelineState* pipelineState = nullptr;
-    ID3D12PipelineState* pointState = nullptr;
+    ID3D12PipelineState* squareState = nullptr;
 
     VertexBuffer<Vertex>* vBuffer = nullptr;
     VertexBuffer<Vertex>* actualCurveBuffer = nullptr;
-    VertexBuffer<Vertex>* aux = nullptr;
+    VertexBuffer<Vertex>* supportSquaresBuffer = nullptr;
+    VertexBuffer<Vertex>* actualSupportSquaresBuffer = nullptr;
 
     static const uint MaxSize = 8192;
     static const int LineSegs = 30;
 
+	Vertex totalSupportSquares[12];
+	Vertex actualSupportSquares[12];
+	uint supportSquaresCount;
+
     Vertex actualCurve[LineSegs + 1];
-    Vertex totalCurve[MaxSize] = {};
-	Vertex P[4] = {};
-    CurveStates state = WaitingP0;
-    uint count = 0;
+    Vertex totalCurve[MaxSize];
+	Vertex P[4];
+    CurveStates state;
+    uint count;
+
+    Vertex totalSupportSquaresBackup[12];
+    Vertex actualSupportSquaresBackup[12];
+    uint supportSquaresCountBackup;
     
     Vertex actualCurveBackup[LineSegs + 1];
-    Vertex totalCurveBackup[MaxSize] = {};
-    Vertex PBackup[4] = {};
-    CurveStates stateBackup = WaitingP0;
-    uint countBackup = 0;
+    Vertex totalCurveBackup[MaxSize];
+    Vertex PBackup[4];
+    CurveStates stateBackup;
+    uint countBackup;
 
 public:
     void Init();
@@ -63,6 +72,7 @@ public:
     void Display();
     void Finalize();
     void BezierCurve(Vertex * curve, Vertex * P);
+	void GetSupportSquaresVertex(Vertex* supportSquareVertex, Vertex vertex, float x, float y);
 
     void BuildRootSignature();
     void BuildPipelineState();

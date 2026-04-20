@@ -137,9 +137,11 @@ void BezierCurves::BuildPipelineState()
     pso.SampleDesc.Quality = graphics->Quality();
     graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipelineState));
 
-    //criação do State para desenho de pontos
-	pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pointState));
+	//criação do State para desenho dos quadrados de suporte
+	pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	rasterizer.FillMode = D3D12_FILL_MODE_SOLID;
+	pso.RasterizerState = rasterizer;
+	graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&squareState));
 
     vertexShader->Release();
     pixelShader->Release();
