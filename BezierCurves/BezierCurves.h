@@ -10,8 +10,6 @@
 **********************************************************************************/
 
 #include "DXUT.h"
-#include <vector>
-using namespace std;
 
 // ------------------------------------------------------------------------------
 
@@ -37,14 +35,18 @@ private:
     static const uint MaxSize = 8192;
     static const int LineSegs = 30;
     Vertex actualCurve[LineSegs + 1];
-	vector <Vertex> backupVertices;
-	vector <Vertex> vertices;
+    Vertex vertices[MaxSize] = {};
 	Vertex P[4] = {};
 	uint numClicks = 0;
 	bool isAdjusting = false;
-    uint points = 0;
     uint count = 0;
-    uint index = 0;
+    
+    Vertex actualCurveBackup[LineSegs + 1];
+    Vertex verticesBackup[MaxSize] = {};
+    Vertex PBackup[4] = {};
+	uint numClicksBackup = 0;
+    bool isAdjustingBackup = false;
+    uint countBackup = 0;
 
 public:
     void Init();

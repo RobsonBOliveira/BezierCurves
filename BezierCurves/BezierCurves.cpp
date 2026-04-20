@@ -72,15 +72,16 @@ void BezierCurves::Update()
                 P[2] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 P[3] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 BezierCurve(actualCurve, P);
+				mountingCurve->Copy(actualCurve, LineSegs + 1);
                 break;
             case 4:
                 P[0] = P[3];
                 P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 numClicks = 2;
                 for(int i = 0; i < LineSegs+1; i++)
-					vertices.push_back(actualCurve[i]);
-                count = vertices.size();
-				vBuffer->Copy(vertices.data(), count);
+                    vertices[count + i] = actualCurve[i];
+                count += LineSegs + 1;
+				vBuffer->Copy(vertices, count);
                 isAdjusting = false;
 				break;
         }
@@ -101,13 +102,50 @@ void BezierCurves::Update()
 
 
     // salva os vértices já criados
-    if(input->KeyPress('S')){}
+    if(input->KeyPress('S'))
+    {
+        for(int i = 0; i < count; i++)
+			verticesBackup[i] = vertices[i];
+
+        for (int i = 0; i < LineSegs + 1; i++)
+            actualCurveBackup[i] = actualCurve[i];
+
+		PBackup[0] = P[0];
+		PBackup[1] = P[1];
+        PBackup[2] = P[2];
+        PBackup[3] = P[3];
+
+		numClicksBackup = numClicks;
+        countBackup = count;
+        isAdjustingBackup = isAdjusting;
+    }
 
 	// carrega vértices previamente salvos
-    if(input->KeyPress('L')){}
+    if(input->KeyPress('L'))
+    {
+        for(int i = 0; i < countBackup; i++)
+			vertices[i] = verticesBackup[i];
+
+        for(int i = 0; i < LineSegs + 1; i++)
+			actualCurve[i] = actualCurveBackup[i];
+
+		P[0] = PBackup[0];
+		P[1] = PBackup[1];
+		P[2] = PBackup[2];
+		P[3] = PBackup[3];
+
+        numClicks = numClicksBackup;
+        count = countBackup;
+        isAdjusting = isAdjustingBackup;
+    }
 
 	// limpa vértices
-    if(input->KeyPress(VK_DELETE)){}
+    if(input->KeyPress(VK_DELETE))
+    {
+		isAdjusting = false;
+		count = 0;
+		numClicks = 0;
+    }
 
     aux->Copy(&P[2], 1);
 	Display();
