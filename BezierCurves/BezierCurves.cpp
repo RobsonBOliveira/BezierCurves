@@ -20,10 +20,9 @@ void BezierCurves::Init()
     // ------------------
  
     // cria vertex buffer
-    curveBuffer = new VertexBuffer<Vertex>(nullptr, MaxSize);
-    curveBufferBackup = new VertexBuffer<Vertex>(nullptr, MaxSize);
-    squareBuffer = new VertexBuffer<Vertex>(nullptr, 8);
-    lineBuffer = new VertexBuffer<Vertex>(nullptr, 2);
+    vBuffer = new VertexBuffer<Vertex>(nullptr, MaxSize);
+    aux = new VertexBuffer<Vertex>(nullptr, 1);
+    mountingCurve = new VertexBuffer<Vertex>(nullptr, LineSegs + 1);
 
     // ------------------
     // Ajusta Pipeline
@@ -39,6 +38,18 @@ void BezierCurves::Init()
 
 void BezierCurves::Update()
 {
+    float cx = float(window->CenterX());
+    float cy = float(window->CenterY());
+    float mx = float(input->MouseX());
+    float my = float(input->MouseY());
+
+    // converte as coordenadas da tela para a faixa -1.0 a 1.0
+    // cy e my foram invertidos para levar em consideração que 
+    // o eixo y da tela cresce na direção oposta do cartesiano
+    float x = (mx - cx) / cx;
+    float y = (cy - my) / cy;
+
+
     // sai com o pressionamento da tecla ESC
     if (input->KeyPress(VK_ESCAPE))
         window->Close();
@@ -46,35 +57,48 @@ void BezierCurves::Update()
     // cria vértices com o botão do mouse
     if (input->KeyPress(VK_LBUTTON))
     {
-        float cx = float(window->CenterX());
-        float cy = float(window->CenterY());
-        float mx = float(input->MouseX());
-        float my = float(input->MouseY());
-        
-        // converte as coordenadas da tela para a faixa -1.0 a 1.0
-        // cy e my foram invertidos para levar em consideração que 
-        // o eixo y da tela cresce na direção oposta do cartesiano
-        float x = (mx - cx) / cx;
-        float y = (cy - my) / cy;
+		numClicks++;
 
-        supportPoints[index] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
-        index = (index + 1) % 4;
-       
-        ++points;
+        switch (numClicks)
+        {
+            case 1:
+                P0 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+				break;
+            case 2:
+				P1 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                break;
+			case 3:
+				isAdjusting = true;
+                P2 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                P3 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                BezierCurve(actualCurve, P0, P1, P2, P3);
+                break;
+            case 4:
+                P0 = P3;
+                P1 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                numClicks = 2;
+                for(int i = 0; i < LineSegs+1; i++)
+					vertices.push_back(actualCurve[i]);
+                count = vertices.size();
+				vBuffer->Copy(vertices.data(), count);
+                isAdjusting = false;
+				break;
+        }
     }
 
-    if (points == 4) 
-    {
-        GetBezierCurve();
-	    count += LineSegs + 1;
-        curveBuffer->Copy(vertices.data(), count);
-        points = 2;
-        index = 2;
-        supportPoints[1] = supportPoints[2];
-        supportPoints[0] = supportPoints[3];
-        // desenha curva
-        Display();
+    if (isAdjusting) {
+        float lastP2x = P2.Pos.x;
+        float lastP2y = P2.Pos.y;
+
+        if (lastP2x != x || lastP2y != y) 
+        {
+            P2.Pos.x = (2 * P3.Pos.x - x);
+            P2.Pos.y = (2 * P3.Pos.y - y);
+            BezierCurve(actualCurve, P0, P1, P2, P3);
+            mountingCurve->Copy(actualCurve, LineSegs + 1);
+		}
     }
+
 
     // salva os vértices já criados
     if(input->KeyPress('S')){}
@@ -84,6 +108,9 @@ void BezierCurves::Update()
 
 	// limpa vértices
     if(input->KeyPress(VK_DELETE)){}
+
+    aux->Copy(&P2, 1);
+	Display();
 }
 
 // ------------------------------------------------------------------------------
@@ -96,11 +123,25 @@ void BezierCurves::Display()
     // submete comandos de configuração do pipeline
     graphics->CommandList()->SetPipelineState(pipelineState);
     graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
-    graphics->CommandList()->IASetVertexBuffers(0, 1, curveBuffer->View());
+    graphics->CommandList()->IASetVertexBuffers(0, 1, vBuffer->View());
     graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 
     // submete comandos de desenho
     graphics->CommandList()->DrawInstanced(count, 1, 0, 0);
+
+    // desenha linha em construção
+    if (isAdjusting)
+    {
+        graphics->CommandList()->IASetVertexBuffers(0, 1, mountingCurve->View());
+        graphics->CommandList()->DrawInstanced(LineSegs + 1, 1, 0, 0);
+    }
+
+    //desenho dos pontos
+	graphics->CommandList()->SetPipelineState(pointState);
+    graphics->CommandList()->IASetVertexBuffers(0, 1, aux->View());
+    graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+    graphics->CommandList()->DrawInstanced(1, 1, 0, 0);
+
 
     // apresenta backbuffer
     graphics->Present();    
@@ -116,32 +157,30 @@ void BezierCurves::Finalize()
     // libera memória alocada
     rootSignature->Release();
     pipelineState->Release();
-    delete curveBuffer;
-	delete squareBuffer;
-	delete lineBuffer;
-	delete curveBufferBackup;
+	pointState->Release();
+    delete vBuffer;
+    delete aux;
+	delete mountingCurve;
 }
 
-Vertex* BezierCurves::GetBezierCurve()
+// ------------------------------------------------------------------------------
+
+void BezierCurves::BezierCurve(Vertex * curve, Vertex P0, Vertex P1, Vertex P2, Vertex P3)
 {
     float t, x, y;
-    Vertex curve[LineSegs + 1];
+
     for (int i = 0; i <= LineSegs; i++) {
         t = 1.0f / LineSegs * i;
-        x = pow(1.0f - t, 3) * supportPoints[0].Pos.x
-            + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.x
-            + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.x
-            + t * t * t * supportPoints[3].Pos.x;
-        y = pow(1.0f - t, 3) * supportPoints[0].Pos.y
-            + 3 * t * pow(1.0f - t, 2) * supportPoints[1].Pos.y
-            + 3 * t * t * (1.0f - t) * supportPoints[2].Pos.y
-            + t * t * t * supportPoints[3].Pos.y;
-        curve[i] = { XMFLOAT3(x, y, 0.0f), XMFLOAT4(Colors::White) };
+        x = pow(1.0f - t, 3) * P0.Pos.x
+            + 3 * t * pow(1.0f - t, 2) * P1.Pos.x
+            + 3 * t * t * (1.0f - t) * P2.Pos.x
+            + t * t * t * P3.Pos.x;
+        y = pow(1.0f - t, 3) * P0.Pos.y
+            + 3 * t * pow(1.0f - t, 2) * P1.Pos.y
+            + 3 * t * t * (1.0f - t) * P2.Pos.y
+            + t * t * t * P3.Pos.y;
+        curve[i] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
     }
-    for (int i = 0; i <= LineSegs; i++)
-        vertices.push_back(curve[i]);
-
-	return curve;
 }
 
 // ------------------------------------------------------------------------------
