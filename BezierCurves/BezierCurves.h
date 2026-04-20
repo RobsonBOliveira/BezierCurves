@@ -29,20 +29,20 @@ private:
     ID3D12PipelineState* pointState = nullptr;
 
     VertexBuffer<Vertex>* vBuffer = nullptr;
-    VertexBuffer<Vertex>* mountingCurve = nullptr;
+    VertexBuffer<Vertex>* actualCurveBuffer = nullptr;
     VertexBuffer<Vertex>* aux = nullptr;
 
     static const uint MaxSize = 8192;
     static const int LineSegs = 30;
     Vertex actualCurve[LineSegs + 1];
-    Vertex vertices[MaxSize] = {};
+    Vertex totalCurve[MaxSize] = {};
 	Vertex P[4] = {};
 	uint numClicks = 0;
 	bool isAdjusting = false;
     uint count = 0;
     
     Vertex actualCurveBackup[LineSegs + 1];
-    Vertex verticesBackup[MaxSize] = {};
+    Vertex totalCurveBackup[MaxSize] = {};
     Vertex PBackup[4] = {};
 	uint numClicksBackup = 0;
     bool isAdjustingBackup = false;

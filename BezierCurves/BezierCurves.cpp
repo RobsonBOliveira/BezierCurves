@@ -22,7 +22,7 @@ void BezierCurves::Init()
     // cria vertex buffer
     vBuffer = new VertexBuffer<Vertex>(nullptr, MaxSize);
     aux = new VertexBuffer<Vertex>(nullptr, 1);
-    mountingCurve = new VertexBuffer<Vertex>(nullptr, LineSegs + 1);
+    actualCurveBuffer = new VertexBuffer<Vertex>(nullptr, LineSegs + 1);
 
     // ------------------
     // Ajusta Pipeline
@@ -72,16 +72,16 @@ void BezierCurves::Update()
                 P[2] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 P[3] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 BezierCurve(actualCurve, P);
-				mountingCurve->Copy(actualCurve, LineSegs + 1);
+				actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
                 break;
             case 4:
                 P[0] = P[3];
                 P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 numClicks = 2;
                 for(int i = 0; i < LineSegs+1; i++)
-                    vertices[count + i] = actualCurve[i];
+                    totalCurve[count + i] = actualCurve[i];
                 count += LineSegs + 1;
-				vBuffer->Copy(vertices, count);
+				vBuffer->Copy(totalCurve, count);
                 isAdjusting = false;
 				break;
         }
@@ -96,7 +96,7 @@ void BezierCurves::Update()
             P[2].Pos.x = (2 * P[3].Pos.x - x);
             P[2].Pos.y = (2 * P[3].Pos.y - y);
             BezierCurve(actualCurve, P);
-            mountingCurve->Copy(actualCurve, LineSegs + 1);
+            actualCurveBuffer->Copy(actualCurve, LineSegs + 1);
 		}
     }
 
@@ -104,10 +104,10 @@ void BezierCurves::Update()
     // salva os vértices já criados
     if(input->KeyPress('S'))
     {
-        for(int i = 0; i < count; i++)
-			verticesBackup[i] = vertices[i];
+        for(uint i = 0; i < count; i++)
+			totalCurveBackup[i] = totalCurve[i];
 
-        for (int i = 0; i < LineSegs + 1; i++)
+        for (uint i = 0; i < LineSegs + 1; i++)
             actualCurveBackup[i] = actualCurve[i];
 
 		PBackup[0] = P[0];
@@ -123,10 +123,10 @@ void BezierCurves::Update()
 	// carrega vértices previamente salvos
     if(input->KeyPress('L'))
     {
-        for(int i = 0; i < countBackup; i++)
-			vertices[i] = verticesBackup[i];
+        for(uint i = 0; i < countBackup; i++)
+			totalCurve[i] = totalCurveBackup[i];
 
-        for(int i = 0; i < LineSegs + 1; i++)
+        for(uint i = 0; i < LineSegs + 1; i++)
 			actualCurve[i] = actualCurveBackup[i];
 
 		P[0] = PBackup[0];
@@ -170,7 +170,7 @@ void BezierCurves::Display()
     // desenha linha em construção
     if (isAdjusting)
     {
-        graphics->CommandList()->IASetVertexBuffers(0, 1, mountingCurve->View());
+        graphics->CommandList()->IASetVertexBuffers(0, 1, actualCurveBuffer->View());
         graphics->CommandList()->DrawInstanced(LineSegs + 1, 1, 0, 0);
     }
 
@@ -198,26 +198,27 @@ void BezierCurves::Finalize()
 	pointState->Release();
     delete vBuffer;
     delete aux;
-	delete mountingCurve;
+	delete actualCurveBuffer;
 }
 
 // ------------------------------------------------------------------------------
 
 void BezierCurves::BezierCurve(Vertex * curve, Vertex * P)
 {
-    float t, x, y;
+    double t, x, y;
 
     for (int i = 0; i <= LineSegs; i++) {
-        t = 1.0f / LineSegs * i;
-        x = pow(1.0f - t, 3) * P[0].Pos.x
-            + 3 * t * pow(1.0f - t, 2) * P[1].Pos.x
-            + 3 * t * t * (1.0f - t) * P[2].Pos.x
+        t = 1.0 / LineSegs * i;
+        x = pow(1.0 - t, 3) * P[0].Pos.x
+            + 3 * t * pow(1.0 - t, 2) * P[1].Pos.x
+            + 3 * t * t * (1.0 - t) * P[2].Pos.x
             + t * t * t * P[3].Pos.x;
-        y = pow(1.0f - t, 3) * P[0].Pos.y
-            + 3 * t * pow(1.0f - t, 2) * P[1].Pos.y
-            + 3 * t * t * (1.0f - t) * P[2].Pos.y
+        y = pow(1.0 - t, 3) * P[0].Pos.y
+            + 3 * t * pow(1.0 - t, 2) * P[1].Pos.y
+            + 3 * t * t * (1.0 - t) * P[2].Pos.y
             + t * t * t * P[3].Pos.y;
-        curve[i] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+
+        curve[i] = { XMFLOAT3{float(x), float(y), 0}, XMFLOAT4{Colors::White}};
     }
 }
 
