@@ -62,20 +62,20 @@ void BezierCurves::Update()
         switch (numClicks)
         {
             case 1:
-                P0 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                P[0] = {XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White}};
 				break;
             case 2:
-				P1 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+				P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 break;
 			case 3:
 				isAdjusting = true;
-                P2 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
-                P3 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
-                BezierCurve(actualCurve, P0, P1, P2, P3);
+                P[2] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                P[3] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                BezierCurve(actualCurve, P);
                 break;
             case 4:
-                P0 = P3;
-                P1 = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
+                P[0] = P[3];
+                P[1] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
                 numClicks = 2;
                 for(int i = 0; i < LineSegs+1; i++)
 					vertices.push_back(actualCurve[i]);
@@ -87,14 +87,14 @@ void BezierCurves::Update()
     }
 
     if (isAdjusting) {
-        float lastP2x = P2.Pos.x;
-        float lastP2y = P2.Pos.y;
+        float lastP2x = P[2].Pos.x;
+        float lastP2y = P[2].Pos.y;
 
         if (lastP2x != x || lastP2y != y) 
         {
-            P2.Pos.x = (2 * P3.Pos.x - x);
-            P2.Pos.y = (2 * P3.Pos.y - y);
-            BezierCurve(actualCurve, P0, P1, P2, P3);
+            P[2].Pos.x = (2 * P[3].Pos.x - x);
+            P[2].Pos.y = (2 * P[3].Pos.y - y);
+            BezierCurve(actualCurve, P);
             mountingCurve->Copy(actualCurve, LineSegs + 1);
 		}
     }
@@ -109,7 +109,7 @@ void BezierCurves::Update()
 	// limpa vértices
     if(input->KeyPress(VK_DELETE)){}
 
-    aux->Copy(&P2, 1);
+    aux->Copy(&P[2], 1);
 	Display();
 }
 
@@ -165,20 +165,20 @@ void BezierCurves::Finalize()
 
 // ------------------------------------------------------------------------------
 
-void BezierCurves::BezierCurve(Vertex * curve, Vertex P0, Vertex P1, Vertex P2, Vertex P3)
+void BezierCurves::BezierCurve(Vertex * curve, Vertex * P)
 {
     float t, x, y;
 
     for (int i = 0; i <= LineSegs; i++) {
         t = 1.0f / LineSegs * i;
-        x = pow(1.0f - t, 3) * P0.Pos.x
-            + 3 * t * pow(1.0f - t, 2) * P1.Pos.x
-            + 3 * t * t * (1.0f - t) * P2.Pos.x
-            + t * t * t * P3.Pos.x;
-        y = pow(1.0f - t, 3) * P0.Pos.y
-            + 3 * t * pow(1.0f - t, 2) * P1.Pos.y
-            + 3 * t * t * (1.0f - t) * P2.Pos.y
-            + t * t * t * P3.Pos.y;
+        x = pow(1.0f - t, 3) * P[0].Pos.x
+            + 3 * t * pow(1.0f - t, 2) * P[1].Pos.x
+            + 3 * t * t * (1.0f - t) * P[2].Pos.x
+            + t * t * t * P[3].Pos.x;
+        y = pow(1.0f - t, 3) * P[0].Pos.y
+            + 3 * t * pow(1.0f - t, 2) * P[1].Pos.y
+            + 3 * t * t * (1.0f - t) * P[2].Pos.y
+            + t * t * t * P[3].Pos.y;
         curve[i] = { XMFLOAT3{x, y, 0}, XMFLOAT4{Colors::White} };
     }
 }

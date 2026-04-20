@@ -39,7 +39,7 @@ private:
     Vertex actualCurve[LineSegs + 1];
 	vector <Vertex> backupVertices;
 	vector <Vertex> vertices;
-	Vertex P0, P1, P2, P3;
+	Vertex P[4] = {};
 	uint numClicks = 0;
 	bool isAdjusting = false;
     uint points = 0;
@@ -51,7 +51,7 @@ public:
     void Update();
     void Display();
     void Finalize();
-    void BezierCurve(Vertex * curve, Vertex P0, Vertex P1, Vertex P2, Vertex P3);
+    void BezierCurve(Vertex * curve, Vertex * P);
 
     void BuildRootSignature();
     void BuildPipelineState();
